@@ -12,8 +12,29 @@ interface EmsRow {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const rows: EmsRow[] = Array.isArray(body) ? body : body.data;
+    let jsonText: string;
+
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("multipart/form-data")) {
+      // FormData 방식 (프론트엔드 업로드)
+      const formData = await req.formData();
+      const file = formData.get("file") as File | null;
+      if (!file) {
+        return NextResponse.json({ error: "파일이 없습니다." }, { status: 400 });
+      }
+      jsonText = await file.text();
+    } else {
+      // JSON body 방식 (curl 등)
+      jsonText = await req.text();
+    }
+
+    let body: unknown;
+    try {
+      body = JSON.parse(jsonText);
+    } catch {
+      return NextResponse.json({ error: "JSON 파싱 실패. 파일 형식을 확인하세요." }, { status: 400 });
+    }
+    const rows: EmsRow[] = Array.isArray(body) ? body : (body as { data: EmsRow[] }).data;
 
     if (!rows || !rows.length) {
       return NextResponse.json({ error: "빈 데이터입니다." }, { status: 400 });

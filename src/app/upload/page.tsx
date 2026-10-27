@@ -50,14 +50,18 @@ export default function UploadPage() {
     setUploading(true);
     setError(null);
     try {
-      const text = await file.text();
-      const json = JSON.parse(text);
+      const formData = new FormData();
+      formData.append("file", file);
       const res = await fetch("/api/upload/ems", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(json),
+        body: formData,
       });
-      const data = await res.json();
+      const resText = await res.text();
+      if (!resText) {
+        setError("서버 응답이 비어 있습니다.");
+        return;
+      }
+      const data = JSON.parse(resText);
       if (!res.ok) {
         setError(data.error || "업로드 실패");
       } else {
