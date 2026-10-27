@@ -69,7 +69,7 @@ export async function GET(
 
   // Excel 생성
   const wb = new ExcelJS.Workbook();
-  wb.creator = "새한 EMS 비가동 분석";
+  wb.creator = "새한프라텍 EMS 비가동 분석";
   wb.created = new Date();
 
   const FONT = "맑은 고딕";

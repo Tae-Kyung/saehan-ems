@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "새한 EMS 비가동 분석",
+  title: "새한프라텍 EMS 비가동 분석",
   description: "설비 비가동 현황 분석 시스템",
 };
 
