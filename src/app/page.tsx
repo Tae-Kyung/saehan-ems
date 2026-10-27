@@ -9,6 +9,7 @@ import { KpiCards } from "@/components/dashboard/kpi-cards";
 import { EquipmentBars } from "@/components/dashboard/equipment-bars";
 import { TopEvents } from "@/components/dashboard/top-events";
 import { formatPercent } from "@/lib/format";
+import { fetchJson } from "@/lib/fetch-safe";
 
 interface DashboardData {
   date: string;
@@ -60,10 +61,12 @@ export default function Home() {
     setNoData(false);
     try {
       const params = factory ? `?factory=${encodeURIComponent(factory)}` : "";
-      const res = await fetch(`/api/dashboard/${date}${params}`);
-      const json = await res.json();
-      if (json.data) {
-        setData(json.data);
+      const res = await fetchJson<{ data: DashboardData | null }>(`/api/dashboard/${date}${params}`);
+      if (res.ok && res.data?.data) {
+        setData(res.data.data);
+      } else if (res.error) {
+        setError(res.error);
+        setNoData(true);
       } else {
         setData(null);
         setNoData(true);
@@ -82,14 +85,13 @@ export default function Home() {
   const runAnalysis = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/analyze", {
+      const res = await fetchJson("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ date, factory: factory || undefined }),
       });
-      const json = await res.json();
       if (!res.ok) {
-        setError(json.error);
+        setError(res.error || "분석 실패");
         return;
       }
       await fetchDashboard();

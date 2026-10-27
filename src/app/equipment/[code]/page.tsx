@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { CurrentChart } from "@/components/dashboard/current-chart";
 import { minuteToTime, formatDuration, formatPercent } from "@/lib/format";
 import { CAUSES } from "@/lib/analysis/constants";
+import { fetchJson } from "@/lib/fetch-safe";
 import Link from "next/link";
 
 interface Tag { k: string; t: string; h: string }
@@ -58,33 +59,31 @@ function EquipmentDetailContent() {
     setLoading(true);
     try {
       const [readRes, evRes, critRes, dashRes] = await Promise.all([
-        fetch(`/api/equipment/${code}/readings?date=${date}`),
-        fetch(`/api/events/${date}?equipment=${code}`),
-        fetch("/api/criteria"),
-        fetch(`/api/dashboard/${date}`),
+        fetchJson<{ data: { equipment: EquipmentInfo; readings: Reading[] } }>(`/api/equipment/${code}/readings?date=${date}`),
+        fetchJson<{ data: EventItem[] }>(`/api/events/${date}?equipment=${code}`),
+        fetchJson<{ data: { group: string; stopThreshold: string; idleThreshold: string }[] }>("/api/criteria"),
+        fetchJson<{ data: { equipment: AnalysisInfo[] } }>(`/api/dashboard/${date}`),
       ]);
 
-      const readJson = await readRes.json();
-      if (readJson.data) {
-        setEquipment(readJson.data.equipment);
-        setReadings(readJson.data.readings);
+      if (readRes.ok && readRes.data?.data) {
+        setEquipment(readRes.data.data.equipment);
+        setReadings(readRes.data.data.readings);
       }
 
-      const evJson = await evRes.json();
-      setEvents(evJson.data || []);
+      if (evRes.ok && evRes.data?.data) {
+        setEvents(evRes.data.data);
+      }
 
-      const critJson = await critRes.json();
-      if (critJson.data && readJson.data) {
-        const group = readJson.data.equipment.group;
-        const crit = critJson.data.find((c: { group: string }) => c.group === group);
+      if (critRes.ok && critRes.data?.data && readRes.data?.data) {
+        const group = readRes.data.data.equipment.group;
+        const crit = critRes.data.data.find((c) => c.group === group);
         if (crit) {
           setCriteria({ stop: parseFloat(crit.stopThreshold), idle: parseFloat(crit.idleThreshold) });
         }
       }
 
-      const dashJson = await dashRes.json();
-      if (dashJson.data) {
-        const eq = dashJson.data.equipment.find((e: { code: string }) => e.code === code);
+      if (dashRes.ok && dashRes.data?.data) {
+        const eq = (dashRes.data.data.equipment as (AnalysisInfo & { code: string })[]).find((e) => e.code === code);
         if (eq) setAnalysis(eq);
       }
     } catch {
